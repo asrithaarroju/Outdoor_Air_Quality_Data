@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outdoor Air Quality Data Visualization</title>
+    <!-- Add Plotly.js library -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- Add styling -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f3f3;
+        }
+        #plot {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background-color: skyblue; /* Sky blue background */
+            margin: 20px;
+        }
+        h1 {
+            color: #4285f4;
+            text-align: center;
+        }
+
+        /* Responsive styles */
+        @media only screen and (max-width: 600px) {
+            #plot {
+                margin: 10px;
+            }
+        }
+
+        @media only screen and (min-width: 601px) and (max-width: 900px) {
+            #plot {
+                margin: 15px;
+            }
+        }
+
+        #lastTimestamp {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Plotly Plot Container -->
+    <div id="plot"></div>
+    <!-- Last Timestamp Display -->
+    <div id="lastTimestamp"></div>
+
+   <!-- Script for fetching and plotting data -->
+<script>
+    // Fetch data from ThingSpeak
+    const api_key = '92WJ4GLX4RQEYITC';
+    const channel_id = '1310984';
+    const url = `https://api.thingspeak.com/channels/${channel_id}/feeds.json?api_key=${api_key}&results=10000000`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const feeds = data.feeds;
+
+
+            // Extract values for each field
+            const timestamps = feeds.map(feed => {
+                const date = new Date(feed.created_at);
+                return `${pad2(date.getDate())}-${pad2(date.getMonth() + 1)}-${date.getFullYear()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+            });
+            const pm25 = feeds.map(feed => parseFloat(feed.field2));
+            const pm10 = feeds.map(feed => parseFloat(feed.field1));
+            const temperature = feeds.map(feed => parseFloat(feed.field3));
+            const humidity = feeds.map(feed => parseFloat(feed.field4));
+
+
+            // Function to pad single-digit numbers with leading zeros
+            function pad2(number) {
+                return (number < 10 ? '0' : '') + number;
+            }
+            
+            // Create Plotly trace for each parameter
+            const trace_pm25 = { x: timestamps, y: pm25, name: 'PM2.5(µg/m3)', type: 'line' };
+            const trace_pm10 = { x: timestamps, y: pm10, name: 'PM10(µg/m3)', type: 'line' };
+            const trace_temperature = { x: timestamps, y: temperature, name: 'Temperature(°C)', type: 'line' };
+            const trace_humidity = { x: timestamps, y: humidity, name: 'Humidity(%)', type: 'line' };
+
+            // Create layout for the plot
+            const layout = {
+                title: 'Outdoor Air Quality Data - ThingSpeak Data Visualization',
+                xaxis: { title: 'Timestamp', type: 'category' },
+                yaxis: { title: 'Values' },
+                showlegend: true,
+                height: 800,
+                width: 1250,
+                xaxis: { rangeslider: { visible: true } }
+            };
+
+            // Combine traces and layout, and plot the chart
+            Plotly.newPlot('plot', [trace_pm25, trace_pm10, trace_temperature, trace_humidity], layout);
+
+            // Print the last timestamp
+            const lastTimestamp = timestamps[timestamps.length - 1];
+            document.getElementById('lastTimestamp').innerHTML = `Last Data_Entry_at: ${lastTimestamp}`;
+        })
+        .catch(error => console.error('Error fetching data:', error));
+</script>
+
+</body>
+</html>
